@@ -1,30 +1,49 @@
 <template>
-  <div id="nav">
-    <router-link to="/">Home</router-link> |
-    <router-link to="/about">About</router-link>
+  <div style="font-size: 60px;">
+    <div>T1的中单是：{{ T1_mid }}</div>
+    <div>T1的ADC是：{{ T1_Bot }}</div>
   </div>
   <router-view/>
+
 </template>
 
+<script>
+
+import $ from 'jquery'
+import { ref } from 'vue'
+
+
+export default {
+  name: "APP",
+  setup: () => {
+    let T1_mid = ref("");
+    let T1_Bot = ref("");
+
+    $.ajax({
+      url:"http://localhost:3000/pk/getinfo/",
+      type:"get",
+      success: resp => {
+        T1_Bot.value = resp.ADC,
+        T1_mid.value = resp.mid
+        
+      }
+    });
+
+    return {
+      T1_Bot,
+      T1_mid 
+    }
+
+  }
+}
+
+</script>
+
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
+
+ body {
+  background-image: url("assets/background.png");
+  background-size: 100%;
 }
 
-#nav {
-  padding: 30px;
-}
-
-#nav a {
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-#nav a.router-link-exact-active {
-  color: #42b983;
-}
 </style>
