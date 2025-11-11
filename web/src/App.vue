@@ -1,39 +1,20 @@
 <template>
-  <div style="font-size: 60px;">
-    <div>T1的中单是：{{ T1_mid }}</div>
-    <div>T1的ADC是：{{ T1_Bot }}</div>
-  </div>
+  <NavBar />
+  
   <router-view/>
 
 </template>
 
 <script>
 
-import $ from 'jquery'
-import { ref } from 'vue'
-
+import NavBar from './components/NavBar.vue';
+import "bootstrap/dist/css/bootstrap.min.css"
+import "bootstrap/dist/js/bootstrap"
+import 'element-plus/dist/index.css'
 
 export default {
-  name: "APP",
-  setup: () => {
-    let T1_mid = ref("");
-    let T1_Bot = ref("");
-
-    $.ajax({
-      url:"http://localhost:3000/pk/getinfo/",
-      type:"get",
-      success: resp => {
-        T1_Bot.value = resp.ADC,
-        T1_mid.value = resp.mid
-        
-      }
-    });
-
-    return {
-      T1_Bot,
-      T1_mid 
-    }
-
+  components: {
+    NavBar,
   }
 }
 
@@ -42,7 +23,7 @@ export default {
 <style>
 
  body {
-  background-image: url("assets/background.png");
+  background-image: url("assets/images/background.png");
   background-size: 100%;
 }
 
