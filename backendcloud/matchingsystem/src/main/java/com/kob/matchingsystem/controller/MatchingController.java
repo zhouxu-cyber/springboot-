@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Objects;
+
 @RestController
 public class MatchingController {
     @Autowired
@@ -14,9 +16,10 @@ public class MatchingController {
 
     @PostMapping("/player/add/")
     public String addPlayer(@RequestParam MultiValueMap<String, String> map) {
-        Integer userId = Integer.parseInt(map.getFirst("user_id"));
-        Integer rating = Integer.parseInt(map.getFirst("rating"));
-        return matchingService.addPlayer(userId, rating);
+        Integer userId = Integer.parseInt(Objects.requireNonNull(map.getFirst("user_id")));
+        Integer rating = Integer.parseInt(Objects.requireNonNull(map.getFirst("rating")));
+        Integer botId = Integer.parseInt(Objects.requireNonNull(map.getFirst("bot_id")));
+        return matchingService.addPlayer(userId, rating, botId);
     }
 
     @PostMapping("/player/remove/")

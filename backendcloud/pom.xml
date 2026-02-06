@@ -9,6 +9,7 @@
     <description>backendcloud</description>
     <modules>
         <module>backend</module>
+        <module>botrunningsystem</module>
     </modules>
     <packaging>pom</packaging>
 

@@ -3,43 +3,58 @@ package com.kob.backend.consumer;
 import com.alibaba.fastjson.JSONObject;
 import com.kob.backend.consumer.utils.Game;
 import com.kob.backend.consumer.utils.JwtAuthentication;
+import com.kob.backend.mapper.BotMapper;
 import com.kob.backend.mapper.RecordMapper;
 import com.kob.backend.mapper.UserMapper;
+import com.kob.backend.pojo.Bot;
 import com.kob.backend.pojo.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 @Component
 @ServerEndpoint("/websocket/{token}")  // 注意不要以'/'结尾
 public class WebSocketServer {
 
     final public static ConcurrentHashMap<Integer, WebSocketServer> users = new ConcurrentHashMap<>();
-    final private static CopyOnWriteArraySet<User> matchpool = new CopyOnWriteArraySet<>();
+
     private User user;
     private Session session = null;
 
-    private Game game = null;
+    public Game game = null;
 
+    public static RestTemplate restTemplate;
+
+    private final static String addPlayerUrl = "http://127.0.0.1:3001/player/add/";
+    private final static String removePlayerUrl = "http://127.0.0.1:3001/player/remove/";
 
     private static UserMapper userMapper;
     public static RecordMapper recordMapper;
+    public static BotMapper botMapper;
     @Autowired
     public void setUserMapper(UserMapper userMapper) {
         WebSocketServer.userMapper = userMapper;
     }
     @Autowired
+    public void setBotMapper(BotMapper botMapper){
+        WebSocketServer.botMapper = botMapper;
+    }
+    @Autowired
     public void setRecordMapper(RecordMapper recordMapper) {
         WebSocketServer.recordMapper = recordMapper;
     }
-
+    @Autowired
+    public void setRestTemplate(RestTemplate restTemplate) {
+        WebSocketServer.restTemplate = restTemplate;
+    }
 
     @OnOpen
     public void onOpen(Session session, @PathParam("token") String token) throws IOException {
@@ -65,66 +80,82 @@ public class WebSocketServer {
         System.out.println("disconnected!");
         if(this.user != null) {
             users.remove(this.user.getId());
-            matchpool.remove(this.user);
         }
     }
 
-    private void startMatch(){
-        System.out.println("start matching!");
-        matchpool.add(this.user);
+    public static void startGame(Integer aId, Integer aBotId, Integer bId, Integer bBotId) {
+        User a = userMapper.selectById(aId), b = userMapper.selectById(bId);
+        Bot BotA = botMapper.selectById(aBotId), BotB = botMapper.selectById(bBotId);
 
-        while(matchpool.size() >= 2) {
-            Iterator<User> it = matchpool.iterator();
-            User a = it.next(), b = it.next();
-
-            matchpool.remove(a);
-            matchpool.remove(b);
-
-            Game game = new Game(13, 14, 20, a.getId(), b.getId());
-            game.createMap();
+        Game game = new Game(
+                13,
+                14,
+                20,
+                a.getId(),
+                BotA,
+                b.getId(),
+                BotB
+        );
+        game.createMap();
+        if(users.get(a.getId()) != null)
             users.get(a.getId()).game = game;
+
+        if(users.get(b.getId()) != null)
             users.get(b.getId()).game = game;
 
-            game.start();
+        game.start();
 
-            JSONObject resGame = new JSONObject();
-            resGame.put("a_id", game.getPlayerA().getId());
-            resGame.put("a_sx", game.getPlayerA().getSx());
-            resGame.put("a_sy", game.getPlayerA().getSy());
-            resGame.put("b_id", game.getPlayerB().getId());
-            resGame.put("b_sx", game.getPlayerB().getSx());
-            resGame.put("b_sy", game.getPlayerB().getSy());
-            resGame.put("map", game.getG());
+        JSONObject resGame = new JSONObject();
+        resGame.put("a_id", game.getPlayerA().getId());
+        resGame.put("a_sx", game.getPlayerA().getSx());
+        resGame.put("a_sy", game.getPlayerA().getSy());
+        resGame.put("b_id", game.getPlayerB().getId());
+        resGame.put("b_sx", game.getPlayerB().getSx());
+        resGame.put("b_sy", game.getPlayerB().getSy());
+        resGame.put("map", game.getG());
 
 
-            JSONObject resA = new JSONObject();
-            resA.put("event", "start-matching");
-            resA.put("opponent_username", b.getUsername());
-            resA.put("opponent_photo", b.getPhoto());
-            resA.put("game", resGame);
+        JSONObject resA = new JSONObject();
+        resA.put("event", "start-matching");
+        resA.put("opponent_username", b.getUsername());
+        resA.put("opponent_photo", b.getPhoto());
+        resA.put("game", resGame);
+        if(users.get(a.getId()) != null)
             users.get(a.getId()).sendMessage(resA.toJSONString());
 
-            JSONObject resB = new JSONObject();
-            resB.put("event", "start-matching");
-            resB.put("opponent_username", a.getUsername());
-            resB.put("opponent_photo", a.getPhoto());
-            resB.put("game", resGame);
+        JSONObject resB = new JSONObject();
+        resB.put("event", "start-matching");
+        resB.put("opponent_username", a.getUsername());
+        resB.put("opponent_photo", a.getPhoto());
+        resB.put("game", resGame);
+        if(users.get(b.getId()) != null)
             users.get(b.getId()).sendMessage(resB.toJSONString());
+    }
 
+    private void startMatch(Integer botId){
+        System.out.println("start matching!");
+        MultiValueMap<String, String> data = new LinkedMultiValueMap<>();
+        data.add("user_id", this.user.getId().toString());
+        data.add("rating", this.user.getRating().toString());
+        data.add("bot_id", botId.toString());
+        restTemplate.postForObject(addPlayerUrl, data, String.class);
 
-        }
     }
 
     private void stopMatch(){
         System.out.println("stop matching!");
-        matchpool.remove(this.user);
+        MultiValueMap<String, String> data = new LinkedMultiValueMap<>();
+        data.add("user_id", this.user.getId().toString());
+        restTemplate.postForObject(removePlayerUrl, data, String.class);
     }
 
     private void move(int direction) {
         if (game.getPlayerA().getId().equals(user.getId())) {
-            game.setNextStepA(direction);
+            if(game.getPlayerA().getBotId().equals(-1))
+                game.setNextStepA(direction);
         } else if (game.getPlayerB().getId().equals(user.getId())) {
-            game.setNextStepB(direction);
+            if(game.getPlayerB().getBotId().equals(-1))
+                game.setNextStepB(direction);
         }
         System.out.println("ok");
 
@@ -138,7 +169,7 @@ public class WebSocketServer {
         String event = data.getString("event");
 
         if("start-matching".equals(event)) {
-            startMatch();
+            startMatch(data.getInteger("bot_id"));
         } else if("stop-matching".equals(event)) {
             stopMatch();
         } else if("move".equals(event)) {

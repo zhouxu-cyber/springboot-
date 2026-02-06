@@ -59,7 +59,7 @@ export class GameMap extends AcGameObject {
 
     start() {
 
-        this.create_walls()   
+        this.create_walls();   
         
         this.add_listening_events();
     }

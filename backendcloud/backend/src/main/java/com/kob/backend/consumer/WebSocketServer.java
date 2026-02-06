@@ -1,11 +1,12 @@
 package com.kob.backend.consumer;
 
 import com.alibaba.fastjson.JSONObject;
-import com.kob.backend.config.filter.RestTemplateConfig;
 import com.kob.backend.consumer.utils.Game;
 import com.kob.backend.consumer.utils.JwtAuthentication;
+import com.kob.backend.mapper.BotMapper;
 import com.kob.backend.mapper.RecordMapper;
 import com.kob.backend.mapper.UserMapper;
+import com.kob.backend.pojo.Bot;
 import com.kob.backend.pojo.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -17,9 +18,7 @@ import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 @Component
 @ServerEndpoint("/websocket/{token}")  // 注意不要以'/'结尾
@@ -30,18 +29,23 @@ public class WebSocketServer {
     private User user;
     private Session session = null;
 
-    private Game game = null;
+    public Game game = null;
 
-    private static RestTemplate restTemplate;
+    public static RestTemplate restTemplate;
 
     private final static String addPlayerUrl = "http://127.0.0.1:3001/player/add/";
     private final static String removePlayerUrl = "http://127.0.0.1:3001/player/remove/";
 
     private static UserMapper userMapper;
     public static RecordMapper recordMapper;
+    public static BotMapper botMapper;
     @Autowired
     public void setUserMapper(UserMapper userMapper) {
         WebSocketServer.userMapper = userMapper;
+    }
+    @Autowired
+    public void setBotMapper(BotMapper botMapper){
+        WebSocketServer.botMapper = botMapper;
     }
     @Autowired
     public void setRecordMapper(RecordMapper recordMapper) {
@@ -79,10 +83,19 @@ public class WebSocketServer {
         }
     }
 
-    public static void startGame(Integer aId, Integer bId) {
+    public static void startGame(Integer aId, Integer aBotId, Integer bId, Integer bBotId) {
         User a = userMapper.selectById(aId), b = userMapper.selectById(bId);
+        Bot BotA = botMapper.selectById(aBotId), BotB = botMapper.selectById(bBotId);
 
-        Game game = new Game(13, 14, 20, a.getId(), b.getId());
+        Game game = new Game(
+                13,
+                14,
+                20,
+                a.getId(),
+                BotA,
+                b.getId(),
+                BotB
+        );
         game.createMap();
         if(users.get(a.getId()) != null)
             users.get(a.getId()).game = game;
@@ -119,11 +132,12 @@ public class WebSocketServer {
             users.get(b.getId()).sendMessage(resB.toJSONString());
     }
 
-    private void startMatch(){
+    private void startMatch(Integer botId){
         System.out.println("start matching!");
         MultiValueMap<String, String> data = new LinkedMultiValueMap<>();
         data.add("user_id", this.user.getId().toString());
         data.add("rating", this.user.getRating().toString());
+        data.add("bot_id", botId.toString());
         restTemplate.postForObject(addPlayerUrl, data, String.class);
 
     }
@@ -137,9 +151,11 @@ public class WebSocketServer {
 
     private void move(int direction) {
         if (game.getPlayerA().getId().equals(user.getId())) {
-            game.setNextStepA(direction);
+            if(game.getPlayerA().getBotId().equals(-1))
+                game.setNextStepA(direction);
         } else if (game.getPlayerB().getId().equals(user.getId())) {
-            game.setNextStepB(direction);
+            if(game.getPlayerB().getBotId().equals(-1))
+                game.setNextStepB(direction);
         }
         System.out.println("ok");
 
@@ -153,7 +169,7 @@ public class WebSocketServer {
         String event = data.getString("event");
 
         if("start-matching".equals(event)) {
-            startMatch();
+            startMatch(data.getInteger("bot_id"));
         } else if("stop-matching".equals(event)) {
             stopMatch();
         } else if("move".equals(event)) {
