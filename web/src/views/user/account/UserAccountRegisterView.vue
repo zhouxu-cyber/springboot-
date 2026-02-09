@@ -32,6 +32,7 @@ import ContentField from '../../../components/ContentField.vue'
 import { ref } from 'vue'
 import $ from 'jquery'
 import router from '../../../router'
+import { useRoute } from "vue-router";
 
 export default {
     components: {
@@ -42,6 +43,7 @@ export default {
         let password = ref('');
         let confirmedPassword = ref('');
         let error_message = ref('');
+        const route = useRoute();
         
         const register = () => {
             $.ajax({
@@ -54,7 +56,10 @@ export default {
                 },
                 success(resp) {
                     if(resp.error_message === 'success') {
-                        router.push({ name: 'user_account_login' });
+                        router.push({
+                        name: "user_account_register",
+                        query: { redirect: route.query.redirect || "/pk/" }
+                        });
                     } else {
                         error_message.value = resp.error_message;
                     }

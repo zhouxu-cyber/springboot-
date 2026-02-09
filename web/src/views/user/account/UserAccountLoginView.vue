@@ -27,6 +27,8 @@ import ContentField from '../../../components/ContentField.vue'
 import { useStore } from 'vuex'
 import { ref } from 'vue'
 import router from '../../../router/index'
+import { useRoute } from "vue-router";
+
 
 export default {
     components: {
@@ -37,13 +39,15 @@ export default {
         let username = ref('');
         let password = ref('');
         let error_message = ref('');
+        const route = useRoute();
+        const redirect = route.query.redirect || "/pk/";
 
         const jwt_token = localStorage.getItem("jwt_token");
         if (jwt_token) {
             store.commit("updateToken", jwt_token);
             store.dispatch("getinfo", {
                 success() {
-                    router.push({ name: 'home' });
+                    router.push(redirect);
                     store.commit("updatePullingInfo", false);
                 }, 
                 error() {
@@ -63,7 +67,7 @@ export default {
                 success() {
                     store.dispatch("getinfo", {
                         success() {
-                            router.push({ name: 'home' });
+                            router.push(redirect);
                         }
                     })
                 },
