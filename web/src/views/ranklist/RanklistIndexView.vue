@@ -58,7 +58,7 @@ export default {
             if(page === -2)     page = current_page - 1;
             else if(page === -1) page = current_page + 1;
 
-            let max_page = parseInt(Math.ceil(total_users / 3));
+            let max_page = parseInt(Math.ceil(total_users / 10));
 
             if(page >= 1 && page <= max_page) {
                 pull_page(page);
@@ -66,7 +66,7 @@ export default {
         }
 
         const update_pages = () => {
-            let max_page = parseInt(Math.ceil(total_users / 3));
+            let max_page = parseInt(Math.ceil(total_users / 10));
             let new_pages = [];
 
             for(let i = current_page - 2; i <= current_page + 2; i ++) {
@@ -84,7 +84,7 @@ export default {
         const pull_page = page => {
             current_page = page;
             $.ajax({
-                url: "http://localhost:3000/ranklist/getlist/",
+                url: "https://app7844.acapp.acwing.com.cn/api/ranklist/getlist/",
                 data: {
                     page,
                 },

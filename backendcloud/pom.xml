@@ -10,7 +10,9 @@
     <modules>
         <module>backend</module>
         <module>botrunningsystem</module>
+        <module>matchingsystem</module>
     </modules>
+
     <packaging>pom</packaging>
 
     <properties>
@@ -58,7 +60,6 @@
                 <version>${spring-boot.version}</version>
                 <configuration>
                     <mainClass>com.kob.backendcloud.BackendcloudApplication</mainClass>
-                    <skip>true</skip>
                 </configuration>
                 <executions>
                     <execution>
