@@ -70,5 +70,5 @@ public class Consume extends Thread {
 
         restTemplate.postForObject(receiveBotMoveUrl, data, String.class);
     }
-
 }
+
