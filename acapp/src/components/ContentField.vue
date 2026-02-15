@@ -41,7 +41,7 @@ div.go_back {
     user-select: none;
 }
 div.go_back:hover {
-    scale: 1.2;
+    transform: scale(1.2);
     transition: 200ms;
 }
 </style>
